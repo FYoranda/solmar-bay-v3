@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<link rel="icon" href="data:,">
+<title>Solmar Bay — Make GTA 6</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0b0b18;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: #fff;
+    touch-action: none; overscroll-behavior: none; -webkit-user-select: none; user-select: none; }
+  #game { position: fixed; inset: 0; }
+  #game canvas { display: block; width: 100%; height: 100%; }
+  .hidden { display: none !important; }
+
+  /* ---------- HUD shared ---------- */
+  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 5;
+    font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,.8); }
+  .panel { background: rgba(8,10,24,.62); border: 1px solid rgba(255,255,255,.14);
+    border-radius: 8px; padding: 8px 10px; backdrop-filter: blur(2px); }
+  .label { font-size: 10px; letter-spacing: .14em; color: #ffb347; font-weight: 700; }
+  .big { font-size: 20px; font-weight: 800; }
+  #hud-tl { position: absolute; top: 14px; left: 14px; min-width: 240px; max-width: 320px; }
+  #hud-tl .job { font-weight: 800; font-size: 14px; }
+  #hud-tl .obj { margin-top: 2px; color: #e8e8ff; }
+  #hud-tl .timer { margin-top: 4px; font-weight: 700; color: #ffd76a; }
+  #hud-tl .stagebar { margin-top: 6px; height: 6px; background: rgba(255,255,255,.18); border-radius: 3px; overflow: hidden; }
+  #hud-tl .stagebar > div { height: 100%; width: 0%; background: linear-gradient(90deg,#ff9d00,#ffd76a); }
+  #hud-dispatch { position: absolute; top: 158px; left: 14px; width: 250px; }
+  #hud-dispatch .unit { display: flex; justify-content: space-between; gap: 6px; padding: 2px 0; font-size: 12px; }
+  #hud-dispatch .unit .role { color: #9fd8ff; }
+  #hud-dispatch .unit .dist { color: #ffd76a; }
+  #hud-dispatch .chip { padding: 0 6px; border-radius: 8px; background: #c0392b; font-size: 10px; font-weight: 700; }
+  #hud-dispatch .chip.spot { background: #e67e22; }
+  #hud-dispatch .chip.road { background: #8e44ad; }
+  #hud-tr { position: absolute; top: 14px; right: 14px; text-align: right; }
+  #hud-tr .money { font-size: 26px; font-weight: 800; color: #7dff9b; }
+  #hud-tr .stars { font-size: 20px; letter-spacing: 2px; color: #ffd76a; }
+  #hud-tr .stars .off { color: rgba(255,255,255,.25); }
+  #hud-tr .clock { font-size: 12px; color: #dfe6ff; }
+  #hud-tr .rankbar { margin-top: 4px; height: 6px; background: rgba(255,255,255,.18); border-radius: 3px; overflow: hidden; }
+  #hud-tr .rankbar > div { height: 100%; width: 0%; background: linear-gradient(90deg,#7d5cff,#00d4ff); }
+  #hud-weapons { position: absolute; top: 118px; right: 14px; display: flex; gap: 6px; }
+  #hud-weapons .slot { width: 46px; padding: 5px 0 4px; text-align: center; border-radius: 6px;
+    background: rgba(8,10,24,.62); border: 1px solid rgba(255,255,255,.16); }
+  #hud-weapons .slot.active { border-color: #ffd76a; background: rgba(255,190,60,.25); }
+  #hud-weapons .slot.locked { opacity: .45; }
+  #hud-weapons .slot .k { font-size: 10px; color: #ffb347; font-weight: 700; }
+  #hud-weapons .slot .n { font-size: 12px; font-weight: 700; }
+  #hud-weapons .slot .a { font-size: 10px; color: #bfe3ff; }
+  #hud-crew { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 8px; width: 168px; }
+  #hud-crew .card { padding: 7px 9px; }
+  #hud-crew .card .nm { font-weight: 800; font-size: 13px; }
+  #hud-crew .card .rl { font-size: 11px; color: #bfe3ff; }
+  #hud-crew .card .st { margin-top: 3px; font-size: 11px; font-weight: 700; color: #7dff9b; }
+  #hud-crew .card .st.cd { color: #ff9d9d; }
+  #hud-crew .card .key { float: right; background: rgba(255,255,255,.16); border-radius: 4px; padding: 0 6px; font-weight: 800; }
+  #hud-bl { position: absolute; left: 14px; bottom: 14px; display: flex; align-items: flex-end; gap: 10px; }
+  #minimap { width: 150px; height: 150px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35);
+    background: rgba(8,10,24,.7); }
+  #hud-bl .vitals { min-width: 150px; }
+  #hud-bl .bar { height: 8px; background: rgba(255,255,255,.18); border-radius: 4px; overflow: hidden; margin: 3px 0 6px; }
+  #hud-bl .bar > div { height: 100%; }
+  #hp-fill { background: linear-gradient(90deg,#27ae60,#7dff9b); width: 100%; }
+  #ar-fill { background: linear-gradient(90deg,#2980b9,#7dc4ff); width: 0%; }
+  #hud-bl .district { font-weight: 800; font-size: 13px; color: #ffd76a; }
+  #hud-dialogue { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%);
+    width: min(520px, 60vw); display: flex; gap: 10px; align-items: center; }
+  #hud-dialogue .face { width: 44px; height: 44px; border-radius: 50%; flex: none;
+    display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800;
+    background: linear-gradient(135deg,#ff9d00,#e74c3c); }
+  #hud-dialogue .who { font-weight: 800; font-size: 12px; color: #ffb347; }
+  #hud-dialogue .say { font-size: 13px; color: #fff; }
+  #hud-br { position: absolute; right: 14px; bottom: 14px; text-align: right; }
+  #hud-br .speed { font-size: 52px; font-weight: 800; line-height: .95; }
+  #hud-br .unit { font-size: 12px; color: #bfe3ff; letter-spacing: .2em; }
+  #hud-br .car { font-weight: 800; font-size: 14px; }
+  #hud-br .cond { font-size: 12px; color: #ffd76a; }
+  #hud-br .radio { font-size: 11px; color: #9fd8ff; margin-top: 2px; }
+  #hud-nitro { position: absolute; right: 14px; bottom: 132px; width: 150px; text-align: right; }
+  #hud-nitro .bar { height: 8px; background: rgba(255,255,255,.18); border-radius: 4px; overflow: hidden; }
+  #hud-nitro .bar > div { height: 100%; width: 100%; background: linear-gradient(90deg,#00d4ff,#7d5cff); }
+  #hud-toast { position: absolute; top: 22%; left: 50%; transform: translateX(-50%);
+    font-size: 26px; font-weight: 800; color: #ffd76a; text-shadow: 0 2px 8px rgba(0,0,0,.9);
+    opacity: 0; transition: opacity .25s; white-space: nowrap; }
+  #hud-toast.show { opacity: 1; }
+
+  /* ---------- Title / pause ---------- */
+  .screen { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 14px; text-align: center;
+    background: linear-gradient(180deg, rgba(20,8,40,.55), rgba(8,10,24,.78)); }
+  .screen h1 { font-size: min(64px, 11vw); font-weight: 900; letter-spacing: .04em;
+    background: linear-gradient(180deg,#ffe9a8,#ff7b00 55%,#ff2e63); -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 4px 24px rgba(255,120,0,.35); }
+  .screen h2 { font-size: 15px; letter-spacing: .35em; color: #9fd8ff; font-weight: 700; }
+  .screen p { max-width: 560px; color: #dfe6ff; font-size: 14px; line-height: 1.5; padding: 0 16px; }
+  .btn { pointer-events: auto; cursor: pointer; border: none; border-radius: 10px;
+    padding: 13px 34px; font-size: 17px; font-weight: 800; letter-spacing: .06em; color: #1a0b00;
+    background: linear-gradient(180deg,#ffd76a,#ff9d00); box-shadow: 0 4px 18px rgba(255,157,0,.45); }
+  .btn.ghost { background: rgba(255,255,255,.14); color: #fff; box-shadow: none; border: 1px solid rgba(255,255,255,.3); }
+  .screen .keys { font-size: 12px; color: #9fb3d9; line-height: 1.8; }
+  .screen .keys b { color: #ffd76a; }
+
+  /* ---------- Touch controls ---------- */
+  #touch-ui { position: fixed; inset: 0; z-index: 10; pointer-events: none; display: none; }
+  html.touch #touch-ui { display: block; }
+  html.touch #hud-weapons, html.touch #hud-crew { display: none; }
+  #touch-joy { position: absolute; left: 18px; bottom: 96px; width: 124px; height: 124px; border-radius: 50%;
+    background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.28); pointer-events: auto; }
+  #touch-knob { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; border-radius: 50%;
+    background: rgba(255,255,255,.32); border: 2px solid rgba(255,255,255,.5);
+    transform: translate(-50%,-50%); }
+  #touch-buttons { position: absolute; right: 14px; bottom: 16px; display: grid;
+    grid-template-columns: repeat(2, 64px); grid-auto-rows: 64px; gap: 10px; pointer-events: auto; }
+  .tbtn { border-radius: 50%; border: 2px solid rgba(255,255,255,.35); background: rgba(8,10,24,.55);
+    color: #fff; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center;
+    text-align: center; pointer-events: auto; }
+  .tbtn.fire { background: rgba(192,57,43,.6); }
+  .tbtn:active { background: rgba(255,190,60,.55); }
+  #touch-weapons { position: absolute; right: 14px; bottom: 172px; display: flex; gap: 8px; pointer-events: auto; }
+  #touch-weapons .wbtn { width: 52px; height: 44px; border-radius: 8px; border: 2px solid rgba(255,255,255,.3);
+    background: rgba(8,10,24,.6); color: #fff; font-weight: 800; font-size: 12px; pointer-events: auto;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  #touch-weapons .wbtn.active { border-color: #ffd76a; background: rgba(255,190,60,.3); }
+  #touch-weapons .wbtn.locked { opacity: .4; }
+  #touch-weapons .wbtn .k { font-size: 10px; color: #ffb347; }
+  #touch-crew { position: absolute; right: 14px; bottom: 292px; display: flex; flex-direction: column; gap: 8px; pointer-events: auto; }
+  #touch-crew .cbtn { width: 52px; height: 44px; border-radius: 8px; border: 2px solid rgba(125,92,255,.55);
+    background: rgba(40,20,80,.6); color: #fff; font-weight: 800; font-size: 13px; pointer-events: auto; }
+  #touch-crew .cbtn.cd { opacity: .45; }
+  #touch-pause { position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    width: 44px; height: 44px; border-radius: 50%; font-size: 15px; pointer-events: auto; }
+  /* touch HUD reflow: minimap + vitals go top-right, dialogue top-left,
+     dispatch below it — all clear of the joystick / action grid / weapons. */
+  html.touch #hud-tl { top: 10px; left: 10px; min-width: 0; max-width: 46vw; padding: 6px 8px; }
+  html.touch #hud-tl .job { font-size: 12px; }
+  html.touch #hud-tl .obj { font-size: 12px; }
+  html.touch #hud-tr { top: 10px; right: 10px; }
+  html.touch #hud-tr .money { font-size: 20px; }
+  html.touch #hud-tr .stars { font-size: 16px; }
+  html.touch #hud-dispatch { top: 182px; left: 10px; width: 200px; padding: 6px 8px; }
+  html.touch #hud-dispatch .unit { font-size: 11px; }
+  html.touch #hud-bl { left: auto; right: 10px; top: 108px; bottom: auto; flex-direction: column; align-items: flex-end; gap: 4px; }
+  html.touch #minimap { width: 96px; height: 96px; }
+  html.touch #hud-bl .vitals { min-width: 96px; text-align: right; }
+  html.touch #hud-dialogue { top: 108px; left: 10px; right: 126px; bottom: auto; transform: none; width: auto; }
+  html.touch #hud-br { bottom: 226px; right: 14px; }
+  html.touch #hud-br .speed { font-size: 38px; }
+  html.touch #hud-nitro { bottom: 232px; right: 182px; width: 88px; }
+  @media (max-height: 500px) {
+    html.touch #hud-bl { top: 96px; }
+    html.touch #hud-dialogue { top: 96px; }
+    html.touch #hud-dispatch { top: 160px; }
+    html.touch #hud-br { bottom: 196px; }
+    html.touch #hud-nitro { bottom: 202px; }
+    html.touch #touch-weapons { bottom: 150px; }
+    html.touch #touch-crew { bottom: 250px; }
+    html.touch #touch-joy { bottom: 70px; width: 104px; height: 104px; }
+  }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+</head>
+<body>
+<div id="game"></div>
+
+<div id="hud" class="hidden">
+  <div id="hud-tl" class="panel">
+    <div class="label">SOLMAR BAY</div>
+    <div class="job" id="job-title">JOB 1/8 · WELCOME TO SOLMAR</div>
+    <div class="obj" id="job-obj">Reach the Calyx Sprint GT on the pier.</div>
+    <div class="timer" id="job-timer"></div>
+    <div class="stagebar"><div id="job-stage"></div></div>
+  </div>
+  <div id="hud-dispatch" class="panel">
+    <div class="label">SBPD DISPATCH · <span id="dispatch-count">0 UNITS</span></div>
+    <div id="dispatch-list"></div>
+  </div>
+  <div id="hud-tr">
+    <div class="money" id="money">$0</div>
+    <div class="stars" id="stars"></div>
+    <div class="clock" id="clock">18:42 · DAY 1</div>
+    <div class="label" id="rank-label">RANK 1 · ROOKIE</div>
+    <div class="rankbar"><div id="rank-fill"></div></div>
+  </div>
+  <div id="hud-weapons"></div>
+  <div id="hud-crew"></div>
+  <div id="hud-bl">
+    <canvas id="minimap" width="150" height="150"></canvas>
+    <div class="vitals">
+      <div class="label">HEALTH</div><div class="bar"><div id="hp-fill"></div></div>
+      <div class="label">ARMOUR</div><div class="bar"><div id="ar-fill"></div></div>
+      <div class="district" id="district">MARINA</div>
+      <div class="label" id="respect-label">RESPECT 0 / 250</div>
+    </div>
+  </div>
+  <div id="hud-dialogue" class="panel">
+    <div class="face" id="dlg-face">M</div>
+    <div><div class="who" id="dlg-who">MIRA · DRIVER</div><div class="say" id="dlg-say">Welcome to Solmar Bay. The city is yours — if you can outrun it.</div></div>
+  </div>
+  <div id="hud-nitro"><div class="label">NITRO</div><div class="bar"><div id="nitro-fill"></div></div></div>
+  <div id="hud-br">
+    <div class="speed"><span id="speed">0</span> <span class="unit">KM/H</span></div>
+    <div class="car" id="car-name">ON FOOT</div>
+    <div class="cond" id="car-cond"></div>
+    <div class="radio" id="radio">Radio Mango 98.6 — Guava Sunrise</div>
+  </div>
+  <div id="hud-toast"></div>
+</div>
+
+<div id="touch-ui">
+  <div id="touch-joy"><div id="touch-knob"></div></div>
+  <div id="touch-buttons">
+    <div class="tbtn fire" data-act="fire">FIRE</div>
+    <div class="tbtn" data-act="jump">JUMP</div>
+    <div class="tbtn" data-act="nitro">NITRO</div>
+    <div class="tbtn" data-act="car">CAR</div>
+  </div>
+  <div id="touch-weapons"></div>
+  <div id="touch-crew"></div>
+  <div class="tbtn" id="touch-pause" data-act="pause">| |</div>
+</div>
+
+<div id="title-screen" class="screen">
+  <h2>SANTA MARIA · SOLMAR BAY</h2>
+  <h1>SOLMAR BAY</h1>
+  <p>An open-world crime story at golden hour. Steal cars, outrun the SBPD,
+     run jobs for the crew, and own the city — on foot, behind the wheel,
+     and one wanted star at a time.</p>
+  <button class="btn" id="btn-new">NEW GAME</button>
+  <button class="btn ghost hidden" id="btn-continue">CONTINUE</button>
+  <div class="keys">
+    <b>WASD</b> move / drive &nbsp;·&nbsp; <b>Space</b> jump &nbsp;·&nbsp; <b>E</b> enter / exit car<br>
+    <b>Shift</b> nitro &nbsp;·&nbsp; <b>F</b> shoot &nbsp;·&nbsp; <b>1–5</b> weapons &nbsp;·&nbsp; <b>Q / E / R</b> crew &nbsp;·&nbsp; <b>Esc</b> pause<br>
+    Touch: left joystick to move &amp; steer, right buttons to fight, drive and jump.
+  </div>
+</div>
+
+<div id="pause-screen" class="screen hidden">
+  <h2>PAUSED</h2>
+  <h1>SOLMAR BAY</h1>
+  <button class="btn" id="btn-resume">RESUME</button>
+  <button class="btn ghost" id="btn-restart">RESTART MISSION</button>
+  <button class="btn ghost" id="btn-quit">QUIT TO TITLE</button>
+</div>
+
+<div id="end-screen" class="screen hidden">
+  <h2 id="end-sub">BUSTED</h2>
+  <h1 id="end-title">BUSTED</h1>
+  <p id="end-text">The SBPD caught up with you.</p>
+  <button class="btn" id="btn-retry">TRY AGAIN</button>
+  <button class="btn ghost" id="btn-end-quit">QUIT TO TITLE</button>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
